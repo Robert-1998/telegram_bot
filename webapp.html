@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Школа Актерского Мастерства - Web App</title>
+    <!-- Подключение Telegram Web App JS API -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #007bff;
+        }
+        .user-info {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Добро пожаловать в Приложение Школы!</h1>
+        <p>Это полноэкранное мини-приложение, открытое внутри Telegram.</p>
+        
+        <div class="user-info">
+            <p>Ваш Telegram User ID (получен из Web App API):</p>
+            <p id="user_id_display">Загрузка...</p>
+        </div>
+
+        <p style="margin-top: 30px;">Здесь будет располагаться форма записи или каталог курсов.</p>
+        
+        <!-- Кнопка для закрытия приложения -->
+        <button onclick="closeWebApp()">Закрыть Приложение</button>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        
+        // 1. Отображение ID пользователя
+        document.getElementById('user_id_display').textContent = tg.initDataUnsafe.user.id || 'ID не найден';
+
+        // 2. Настройка кнопки закрытия
+        function closeWebApp() {
+            tg.close();
+        }
+        
+        // 3. (Опционально) Установка цвета фона, чтобы он соответствовал теме Telegram
+        tg.ready();
+        tg.expand(); // Растягиваем приложение на весь экран
+        
+    </script>
+</body>
+</html>
