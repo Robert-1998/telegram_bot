@@ -32,6 +32,22 @@
             border-radius: 8px;
             background-color: #e9ecef;
         }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .close-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .register-btn {
+            background-color: #28a745;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -46,25 +62,49 @@
 
         <p style="margin-top: 30px;">Здесь будет располагаться форма записи или каталог курсов.</p>
         
-        <!-- Кнопка для закрытия приложения -->
-        <button onclick="closeWebApp()">Закрыть Приложение</button>
+        <!-- Кнопки будут добавлены динамически через JavaScript -->
+        <div id="course_buttons">
+            <!-- Кнопки появятся здесь -->
+        </div>
+
+        <button class="close-btn" onclick="closeWebApp()">Закрыть Приложение</button>
     </div>
 
     <script>
-        // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
         
-        // 1. Отображение ID пользователя
+        // 1. Инициализация и отображение ID
         document.getElementById('user_id_display').textContent = tg.initDataUnsafe.user.id || 'ID не найден';
+        tg.ready();
+        tg.expand(); 
+        
+        // 2. Функция для отправки данных боту
+        function sendRegistrationData(courseId) {
+            // Отправляем команду и ID курса обратно боту (main.py ждет "REGISTER:ID")
+            tg.sendData(`REGISTER:${courseId}`); 
+            tg.close(); // Закрываем Web App после отправки данных
+        }
 
-        // 2. Настройка кнопки закрытия
         function closeWebApp() {
             tg.close();
         }
         
-        // 3. (Опционально) Установка цвета фона, чтобы он соответствовал теме Telegram
-        tg.ready();
-        tg.expand(); // Растягиваем приложение на весь экран
+        // 3. Динамическое создание кнопок курсов
+        const container = document.getElementById('course_buttons');
+        
+        const courses = {
+            'acting_basic': 'Основы Актерского Мастерства',
+            'voice_tech': 'Техника Голоса и Речи',
+            'improvisation': 'Импровизация'
+        };
+        
+        for (const id in courses) {
+            const button = document.createElement('button');
+            button.textContent = courses[id];
+            button.className = 'register-btn';
+            button.onclick = () => sendRegistrationData(id); // При нажатии отправляем ID
+            container.appendChild(button);
+        }
         
     </script>
 </body>

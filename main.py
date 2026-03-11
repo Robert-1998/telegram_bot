@@ -678,6 +678,37 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(ai_response)
     return
 
+# новый блок связывания фронта с беком
+async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает данные, отправленные из Telegram Web App."""
+    
+    web_app_data = update.message.web_app_data
+    if not web_app_data:
+        return
+
+    data_received = web_app_data.data
+    user_id = str(update.effective_user.id)
+    logger.info(f"Received data from Web App from user {user_id}: {data_received}")
+
+    # Здесь мы ожидаем, что данные будут в формате, который мы отправим из JS
+    # Например, если JS отправит "REGISTER:acting_basic"
+    
+    if data_received.startswith("REGISTER:"):
+        course_id = data_received.split(":")[1]
+        
+        # Вызываем функцию записи из data_manager
+        registration_result = data_manager.register_user_for_course(user_id, course_id)
+        
+        if registration_result.get("status") == "success":
+            response_text = f"✅ Запись на курс {course_id} подтверждена через Web App!"
+        else:
+            response_text = f"❌ Ошибка при записи через Web App: {registration_result.get('error', 'Неизвестная ошибка.')}"
+            
+        await update.message.reply_text(response_text)
+        return
+
+    # Если данные не соответствуют ожидаемому формату
+    await update.message.reply_text(f"Получены неизвестные данные из приложения: {data_received}")
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает нажатия на inline-кнопки."""
@@ -833,16 +864,23 @@ def main() -> None:
         
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
+    # ... (проверки токенов)
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+
     # регистрация обработчиков
     application.add_handler(CommandHandler("start", start_command))
     
-    # обработчик для сбора данных
+    # 1. Обработчик для Web App данных
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
+    
+    # 2. Обработчик для сбора данных (должен идти ПЕРВЫМ для текстовых сообщений, когда ждем ввод)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_data_input)) 
     
-    # обработчик для обычных текстовых запросов
+    # 3. Обработчик для обычных текстовых запросов (когда НЕ ждем ввод)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    application.add_handler(CallbackQueryHandler(button_callback))
+    # 4. Обработчик для кнопок
+    application.add_handler(CallbackQueryHandler(button_callback)) 
 
     logger.info("Бот запущен и ожидает сообщений...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
