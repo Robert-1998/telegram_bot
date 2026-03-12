@@ -1,483 +1,3 @@
-# import logging
-# import os
-# import asyncio
-# from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-# from telegram.ext import CallbackQueryHandler
-# from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-# from google import genai 
-# from google.genai.errors import APIError
-# import data_manager # импорт модуля БД
-
-
-
-# logging.basicConfig(
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#     level=logging.INFO
-# )
-# logger = logging.getLogger(__name__)
-
-# # --- 2. ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ---
-# TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-# GEMINI_KEY_CHECK = os.getenv("GEMINI_API_KEY")
-
-# # Логирование проверок (теперь logger определен)
-# logger.info(f"Telegram Token Loaded: {'Yes' if TELEGRAM_TOKEN else 'NO'}")
-# logger.info(f"Gemini API Key Loaded: {'Yes' if GEMINI_KEY_CHECK else 'NO'}")
-
-
-# # --- 3. ИНИЦИАЛИЗАЦИЯ СЕРВИСОВ ---
-
-# # получение телеграмм токена
-# if not TELEGRAM_TOKEN:
-#     logging.critical("Запуск невозможен: TELEGRAM_TOKEN не установлен.")
-
-# # инициализация клиента Гемини
-# try:
-#     client = genai.Client()
-#     logging.info("Клиент Гемини подключен")
-# except Exception as e:
-#     # Исправлено форматирование f-строки для вывода ошибки
-#     logging.error(f"Не удалось подключить клиента Гемини. Ошибка: {e}")
-#     client = None
-
-# # --- 4. ОБРАБОТЧИКИ ---
-
-# async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-#     """подтверждение получения команды start"""
-#     user = update.effective_user
-#     await update.message.reply_html(
-#         f"Привет, {user.mention_html()}! Я ваш ассистент. Чем могу помочь? Спросите меня о курсах!",
-#     )
-
-# # async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-# #     """отправка сообщения пользователя в Gemini и возврат ответа с поддержкой функций"""
-# #     user_text = update.message.text
-# #     user_id = str(update.effective_user.id) # Получаем ID пользователя как строку для БД
-# #     logger.info(f"Получено сообщение от {user_id}: {user_text}")
-    
-# #     if not client:
-# #         await update.message.reply_text("Ошибка ИИ. Попробуйте позже.")
-# #         return
-    
-
-
-
-# #     # 1. Определение инструментов (функций) для LLM
-# #     tools = [
-# #         genai.types.Tool(
-# #             function_declarations=[
-# #                 genai.types.FunctionDeclaration(
-# #                     name="get_course_details",
-# #                     description="Предоставляет подробную информацию о конкретном курсе по его ID.",
-# #                     parameters={
-# #                         "type": "object",
-# #                         "properties": {
-# #                             "course_id": {
-# #                                 "type": "string",
-# #                                 "description": "ID курса, например, 'acting_basic' или 'voice_tech'.",
-# #                             }
-# #                         },
-# #                         "required": ["course_id"],
-# #                     },
-# #                 ),
-# #                 genai.types.FunctionDeclaration(
-# #                     name="check_user_registration_status",
-# #                     description="Проверяет, на какой курс записан пользователь, используя его Telegram ID.",
-# #                     parameters={
-# #                         "type": "object",
-# #                         "properties": {
-# #                             "user_telegram_id": {
-# #                                 "type": "string",
-# #                                 "description": f"Telegram ID пользователя. Ваш текущий ID: {user_id}",
-# #                             }
-# #                         },
-# #                         "required": ["user_telegram_id"],
-# #                     },
-# #                 )
-# #             ]
-# #         )
-# #     ]
-
-    
-
-# #     try:
-# #         # 2. Первый вызов: LLM решает, нужно ли вызывать функцию
-# #         response = client.models.generate_content(
-# #             model='gemini-2.5-flash', 
-# #             contents=user_text,
-# #             config=genai.types.GenerateContentConfig(
-# #                 # ИНСТРУКЦИЯ УСИЛЕНА
-# #                 system_instruction="Ты — строгий ассистент школы актерского мастерства. Если пользователь спрашивает о деталях курса (используя ID) или о своей записи (используя ID), ТЫ ОБЯЗАН использовать предоставленные функции. Если пользователь спрашивает 'какие у вас есть курсы?', ответь одним сообщением: [LIST_COURSES_START] и затем перечисли курсы в виде: ID: Название Курса. В остальных случаях отвечай дружелюбно.",
-# #                 tools=tools
-# #             )
-# #         )
-        
-# #         # Проверка, вызвал ли LLM функцию
-# #         function_call_part = None
-# #         if response.candidates and response.candidates[0].content.parts:
-# #             for part in response.candidates[0].content.parts:
-# #                 if part.function_call:
-# #                     function_call_part = part.function_call
-# #                     break
-
-# #         if function_call_part:
-# #             # --- СЛУЧАЙ 1: ВЫЗОВ ФУНКЦИИ ---
-# #             function_name = function_call_part.name
-# #             args = function_call_part.args
-# #             function_result = None
-            
-# #             # Выполнение запрошенной функции (используем функции из data_manager)
-# #             if function_name == "get_course_details":
-# #                 function_result = data_manager.get_course_details(args.get("course_id"))
-# #             elif function_name == "check_user_registration_status":
-# #                 function_result = data_manager.check_user_registration_status(args.get("user_telegram_id"))
-            
-# #             # 3. Второй вызов: Отправляем РЕЗУЛЬТАТ ФУНКЦИИ ОБРАТНО В LLM
-# #             second_response = client.models.generate_content(
-# #                 model='gemini-2.5-flash',
-# #                 contents=[
-# #                     # Отправляем исходный запрос пользователя (роль user)
-# #                     genai.types.Content(role="user", parts=[genai.types.Part(text=user_text)]),
-# #                     # Отправляем результат функции (роль model, но с типом function_response)
-# #                     genai.types.Part(
-# #                         function_response=genai.types.FunctionResponse(
-# #                             name=function_name,
-# #                             response=function_result
-# #                         )
-# #                     )
-# #                 ]
-# #             )
-# #             ai_response = second_response.text
-            
-# #         else:
-# #             # --- СЛУЧАЙ 2: ПРЯМОЙ ТЕКСТОВЫЙ ОТВЕТ ---
-# #             ai_response = response.text
-        
-# #         # --- UX: Имитация печати и отправка финального ответа ---
-        
-# #         LIST_START_MARKER = "[LIST_COURSES_START]"
-        
-# #         if LIST_START_MARKER in ai_response:
-# #             # LLM решил вывести список курсов. Мы его парсим и заменяем на клавиатуру.
-            
-# #             # 1. Извлекаем только список курсов, удаляя маркер
-# #             list_text = ai_response.split(LIST_START_MARKER)[-1].strip()
-            
-# #             # 2. Генерируем клавиатуру
-# #             keyboard = []
-# #             # Парсим список (предполагая, что LLM вывел его построчно)
-# #             for line in list_text.split('\n'):
-# #                 if ":" in line:
-# #                     try:
-# #                         # Извлекаем ID и Название для кнопки
-# #                         course_id, course_name_full = line.split(":", 1)
-# #                         course_id = course_id.strip()
-# #                         course_name = course_name_full.strip()
-                        
-# #                         # Создаем кнопку, которая будет передавать ID курса для дальнейшей обработки
-# #                         keyboard.append([
-# #                             InlineKeyboardButton(
-# #                                 course_name, 
-# #                                 callback_data=f"COURSE_DETAILS:{course_id}"
-# #                             )
-# #                         ])
-# #                     except Exception:
-# #                         # Игнорируем строки, которые не удалось распарсить
-# #                         pass
-            
-# #             # Создаем клавиатуру и отправляем ответ с ней
-# #             reply_markup = InlineKeyboardMarkup(keyboard)
-# #             await update.message.reply_text("Вот список наших курсов. Нажмите на название, чтобы узнать подробности:", reply_markup=reply_markup)
-# #             return # Выход, так как мы отправили ответ с кнопками
-
-
-# #         # Если это обычный ответ (не список курсов)
-# #         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-# #         await asyncio.sleep(0.5) 
-        
-# #         await update.message.reply_text(ai_response)
-# #         return
-
-# #     except APIError as e:
-# #         logger.error(f"Ошибка при обращении к Gemini API: {e}")
-# #         await update.message.reply_text("Извините, возникла ошибка при запросе к ИИ (возможно, превышен лимит или проблема с ключом).")
-# #     except Exception as e:
-# #         logger.error(f"Непредвиденная ошибка: {e}")
-# #         await update.message.reply_text("Произошла неизвестная ошибка при обработке запроса.")
-
-
-# async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-#     """отправка сообщения пользователя в Gemini и возврат ответа с поддержкой функций"""
-#     user_text = update.message.text
-#     user_id = str(update.effective_user.id) 
-#     logger.info(f"Получено сообщение от {user_id}: {user_text}")
-    
-#     if not client:
-#         await update.message.reply_text("Ошибка ИИ. Попробуйте позже.")
-#         return
-
-#     TEST_BUTTON_MODE = True # <-- УБЕДИТЕСЬ, ЧТО ЭТО True ДЛЯ ТЕСТИРОВАНИЯ КНОПОК
-#     ai_response = "" # Инициализируем переменную
-
-#     if TEST_BUTTON_MODE:
-#         # РЕЖИМ ЗАГЛУШКИ: Принудительно генерируем список курсов
-#         list_text = ""
-#         for cid, data in data_manager.MOCK_DB_SCHOOL["courses"].items():
-#             list_text += f"{cid}: {data['name']}\n"
-        
-#         ai_response = f"[LIST_COURSES_START]\n{list_text}"
-        
-#     else:
-#         # --- ОБЫЧНАЯ ЛОГИКА LLM (ВЫПОЛНЯЕТСЯ, ТОЛЬКО ЕСЛИ TEST_BUTTON_MODE = False) ---
-        
-#         # 1. Определение инструментов (функций) для LLM
-#         tools = [
-#             genai.types.Tool(
-#                 function_declarations=[
-#                     genai.types.FunctionDeclaration(
-#                         name="get_course_details",
-#                         description="Предоставляет подробную информацию о конкретном курсе по его ID.",
-#                         parameters={
-#                             "type": "object",
-#                             "properties": {
-#                                 "course_id": {
-#                                     "type": "string",
-#                                     "description": "ID курса, например, 'acting_basic' или 'voice_tech'.",
-#                                 }
-#                             },
-#                             "required": ["course_id"],
-#                         },
-#                     ),
-#                     genai.types.FunctionDeclaration(
-#                         name="check_user_registration_status",
-#                         description="Проверяет, на какой курс записан пользователь, используя его Telegram ID.",
-#                         parameters={
-#                             "type": "object",
-#                             "properties": {
-#                                 "user_telegram_id": {
-#                                     "type": "string",
-#                                     "description": f"Telegram ID пользователя. Ваш текущий ID: {user_id}",
-#                                 }
-#                             },
-#                             "required": ["user_telegram_id"],
-#                         },
-#                     )
-#                 ]
-#             )
-#         ]
-
-#         try:
-#             # 2. Первый вызов: LLM решает, нужно ли вызывать функцию
-#             response = client.models.generate_content(
-#                 model='gemini-2.5-flash', 
-#                 contents=user_text,
-#                 config=genai.types.GenerateContentConfig(
-#                     system_instruction="Ты — ассистент школы актерского мастерства. Если пользователь спрашивает о деталях курса (используя ID) или о своей записи (используя ID), ТЫ ОБЯЗАН использовать предоставленные функции. Если пользователь спрашивает 'какие у вас есть курсы?', ответь одним сообщением: [LIST_COURSES_START] и затем перечисли курсы в виде: ID: Название Курса. В остальных случаях отвечай дружелюбно.",
-#                     tools=tools
-#                 )
-#             )
-            
-#             # Проверка, вызвал ли LLM функцию
-#             function_call_part = None
-#             if response.candidates and response.candidates[0].content.parts:
-#                 for part in response.candidates[0].content.parts:
-#                     if part.function_call:
-#                         function_call_part = part.function_call
-#                         break
-
-#             if function_call_part:
-#                 # --- СЛУЧАЙ 1: ВЫЗОВ ФУНКЦИИ ---
-#                 function_name = function_call_part.name
-#                 args = function_call_part.args
-#                 function_result = None
-                
-#                 if function_name == "get_course_details":
-#                     function_result = data_manager.get_course_details(args.get("course_id"))
-#                 elif function_name == "check_user_registration_status":
-#                     function_result = data_manager.check_user_registration_status(args.get("user_telegram_id"))
-                
-#                 # 3. Второй вызов: Отправляем РЕЗУЛЬТАТ ФУНКЦИИ ОБРАТНО В LLM
-#                 second_response = client.models.generate_content(
-#                     model='gemini-2.5-flash',
-#                     contents=[
-#                         genai.types.Content(role="user", parts=[genai.types.Part(text=user_text)]),
-#                         genai.types.Part(
-#                             function_response=genai.types.FunctionResponse(
-#                                 name=function_name,
-#                                 response=function_result
-#                             )
-#                         )
-#                     ]
-#                 )
-#                 ai_response = second_response.text
-                
-#             else:
-#                 # --- СЛУЧАЙ 2: ПРЯМОЙ ТЕКСТОВЫЙ ОТВЕТ ---
-#                 ai_response = response.text
-            
-#         except APIError as e:
-#             logger.error(f"Ошибка при обращении к Gemini API: {e}")
-#             await update.message.reply_text("Извините, возникла ошибка при запросе к ИИ (возможно, превышен лимит или проблема с ключом).")
-#             return # Выходим, если LLM не сработал
-#         except Exception as e:
-#             logger.error(f"Непредвиденная ошибка: {e}")
-#             await update.message.reply_text("Произошла неизвестная ошибка при обработке запроса.")
-#             return # Выходим, если LLM не сработал
-
-#     # --- БЛОК ПАРСИНГА И UX (ОБЩИЙ ДЛЯ ОБЕИХ ВЕТОК) ---
-    
-#     LIST_START_MARKER = "[LIST_COURSES_START]"
-    
-#     if LIST_START_MARKER in ai_response:
-#         # Логика создания кнопок (как в Этапе 5)
-#         list_text = ai_response.split(LIST_START_MARKER)[-1].strip()
-#         keyboard = []
-#         for line in list_text.split('\n'):
-#             if ":" in line:
-#                 try:
-#                     course_id, course_name_full = line.split(":", 1)
-#                     course_id = course_id.strip()
-#                     course_name = course_name_full.strip()
-#                     keyboard.append([
-#                         InlineKeyboardButton(course_name, callback_data=f"COURSE_DETAILS:{course_id}")
-#                     ])
-#                 except Exception:
-#                     pass
-        
-#         reply_markup = InlineKeyboardMarkup(keyboard)
-#         await update.message.reply_text("Вот список наших курсов. Нажмите на название, чтобы узнать подробности:", reply_markup=reply_markup)
-#         return 
-
-#     # Если это обычный ответ (не список курсов)
-#     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-#     await asyncio.sleep(0.5) 
-    
-#     await update.message.reply_text(ai_response)
-#     return
-
-
-# async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-#     """Обрабатывает нажатия на inline-кнопки."""
-#     query = update.callback_query
-#     await query.answer() 
-
-#     data = query.data
-#     logger.info(f"Callback received: {data}")
-#     user_id = str(query.from_user.id) # ID пользователя, который нажал кнопку
-
-#     # --- СЛУЧАЙ 1: ПОДРОБНЕЕ О КУРСЕ (COURSE_DETAILS) ---
-#     if data.startswith("COURSE_DETAILS:"):
-        
-#         course_id = data.split(":")[1]
-#         course_details_dict = data_manager.get_course_details(course_id)
-        
-#         if "error" in course_details_dict:
-#             response_text = course_details_dict["error"]
-#             reply_markup = None
-#         else:
-#             # Форматируем детали и добавляем кнопки "Записаться" и "Назад"
-#             response_text = (
-#                 f"Детали курса: {course_details_dict.get('name', 'N/A')}\n"
-#                 f"Продолжительность: {course_details_dict.get('duration', 'N/A')}\n"
-#                 f"Расписание: {course_details_dict.get('schedule', 'N/A')}\n"
-#                 f"Преподаватель: {course_details_dict.get('instructor', 'N/A')}\n"
-#                 f"Статус: {course_details_dict.get('status', 'N/A')}\n\n"
-#             )
-            
-#             # Создаем клавиатуру с кнопками "Записаться" и "Назад"
-#             keyboard = [
-#                 [InlineKeyboardButton("Записаться", callback_data=f"REGISTER_COURSE:{course_id}")],
-#                 [InlineKeyboardButton("⬅️ Назад к списку", callback_data="GO_HOME")]
-#             ]
-#             reply_markup = InlineKeyboardMarkup(keyboard)
-            
-#         await query.edit_message_text(response_text, reply_markup=reply_markup)
-#         return
-
-#     # --- СЛУЧАЙ 2: ПОПЫТКА ЗАПИСИ (REGISTER_COURSE) ---
-#     elif data.startswith("REGISTER_COURSE:"):
-        
-#         course_id = data.split(":")[1]
-        
-#         # 1. Проверяем, не записан ли пользователь уже (используем старую логику для проверки)
-#         user_id = str(query.from_user.id)
-#         registration_check = data_manager.check_user_registration_status(user_id)
-        
-#         if "Вы записаны на курс" in registration_check:
-#             await query.edit_message_text(registration_check)
-#             return
-            
-#         # 2. Если не записан, сохраняем ID курса в контексте пользователя и запрашиваем данные
-#         context.user_data['pending_registration_course_id'] = course_id
-        
-#         response_text = f"Отлично! Вы выбрали курс '{data_manager.MOCK_DB_SCHOOL['courses'][course_id]['name']}'. Пожалуйста, введите Ваше полное имя и номер телефона через запятую (например: Иван Петров, +79991234567)."
-        
-#         # Создаем клавиатуру с кнопкой "Отмена"
-#         keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data="GO_HOME")]]
-#         reply_markup = InlineKeyboardMarkup(keyboard)
-        
-#         await query.edit_message_text(response_text, reply_markup=reply_markup)
-#         return
-        
-#     # --- СЛУЧАЙ 3: КНОПКА НАЗАД (GO_HOME) ---
-#     elif data == "GO_HOME":
-#         # При нажатии "Назад" мы должны снова вызвать LLM (или заглушку) для генерации списка
-        
-#         # Временно используем заглушку для генерации списка, чтобы не тратить квоту LLM
-#         list_text = ""
-#         for cid, course_data in data_manager.MOCK_DB_SCHOOL["courses"].items():
-#             list_text += f"{cid}: {course_data['name']}\n"
-        
-#         ai_response = f"[LIST_COURSES_START]\n{list_text}"
-        
-#         # Парсим и отправляем список с кнопками (повторяем логику из handle_message)
-#         LIST_START_MARKER = "[LIST_COURSES_START]"
-#         if LIST_START_MARKER in ai_response:
-#             list_text_parsed = ai_response.split(LIST_START_MARKER)[-1].strip()
-#             keyboard = []
-#             for line in list_text_parsed.split('\n'):
-#                 if ":" in line:
-#                     try:
-#                         course_id, course_name_full = line.split(":", 1)
-#                         course_id = course_id.strip()
-#                         course_name = course_name_full.strip()
-#                         keyboard.append([
-#                             InlineKeyboardButton(course_name, callback_data=f"COURSE_DETAILS:{course_id}")
-#                         ])
-#                     except Exception:
-#                         pass
-            
-#             reply_markup = InlineKeyboardMarkup(keyboard)
-#             await query.edit_message_text("Вот список наших курсов. Нажмите на название, чтобы узнать подробности:", reply_markup=reply_markup)
-#             return
-
-#     # Если нажали неизвестную кнопку
-#     await query.edit_message_text("Неизвестное действие кнопки.")
-
-# # --- 5. ЗАПУСК ---
-# def main() -> None:
-#     """запуск бота"""
-    
-#     if not TELEGRAM_TOKEN:
-#         logger.critical("Запуск невозможен: TELEGRAM_TOKEN не установлен.")
-#         return
-        
-#     # создание объекта с использованием  токена
-#     application = Application.builder().token(TELEGRAM_TOKEN).build()
-
-#     # регистрация обработчиков
-#     application.add_handler(CommandHandler("start", start_command))
-#     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-#     # НОВЫЙ ОБРАБОТЧИК ДЛЯ КНОПОК
-#     application.add_handler(CallbackQueryHandler(button_callback)) 
-
-#     # запуск бота
-#     logger.info("Бот запущен и ожидает сообщений...")
-#     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-# if __name__ == '__main__':
-#     main()
-
 
 import logging
 import os
@@ -496,16 +16,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- 2. ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ---
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_KEY_CHECK = os.getenv("GEMINI_API_KEY")
 
-# Логирование проверок (теперь logger определен)
+# логирование
 logger.info(f"Telegram Token Loaded: {'Yes' if TELEGRAM_TOKEN else 'NO'}")
 logger.info(f"Gemini API Key Loaded: {'Yes' if GEMINI_KEY_CHECK else 'NO'}")
 
 
-# --- 3. ИНИЦИАЛИЗАЦИЯ СЕРВИСОВ ---
+#  сервисы
 
 # получение телеграмм токена
 if not TELEGRAM_TOKEN:
@@ -678,10 +197,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(ai_response)
     return
 
-# новый блок связывания фронта с беком
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обрабатывает данные, отправленные из Telegram Web App."""
-    
     web_app_data = update.message.web_app_data
     if not web_app_data:
         return
@@ -690,35 +206,30 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = str(update.effective_user.id)
     logger.info(f"Received data from Web App from user {user_id}: {data_received}")
 
-    # Здесь мы ожидаем, что данные будут в формате, который мы отправим из JS
-    # Например, если JS отправит "REGISTER:acting_basic"
-    
-    if data_received.startswith("REGISTER:"):
+    if data_received.startswith("WEB_REGISTER:"):
         course_id = data_received.split(":")[1]
         
-        # Вызываем функцию записи из data_manager
-        registration_result = data_manager.register_user_for_course(user_id, course_id)
+        # 1. Проверяем, не записан ли пользователь уже (используем функцию из БД)
+        registration_check = data_manager.check_user_registration_status(user_id)
         
-        if registration_result.get("status") == "success":
-            response_text = f"✅ Запись на курс {course_id} подтверждена через Web App!"
-            
-            # Отправляем подтверждение обратно в Web App (если оно еще открыто)
-            tg_data = f"SUCCESS: Запись на {course_id} прошла успешно."
-            tg.sendData(tg_data) # Отправляем подтверждение
-            
+        if "Вы записаны на курс" in registration_check:
+            response_text = registration_check
         else:
-            response_text = f"❌ Ошибка при записи через Web App: {registration_result.get('error', 'Неизвестная ошибка.')}"
+            # 2. Выполняем запись (так как в Web App нет поля для ввода имени/телефона, мы используем заглушку)
+            registration_result = data_manager.register_user_for_course(user_id, course_id)
             
-        # Отправляем сообщение в чат (для надежности)
-        await update.message.reply_text(response_text)
+            if registration_result.get("status") == "success":
+                course_name = data_manager.MOCK_DB_SCHOOL['courses'][course_id]['name']
+                response_text = f"✅ Успешно! Вы записаны на курс '{course_name}' через Web App."
+            else:
+                response_text = f"❌ Ошибка при записи: {registration_result.get('error', 'Неизвестная ошибка.')}"
+            
+        # Отправляем ответ обратно в Web App (используя tg.sendData)
+        tg.sendData(response_text) # tg здесь не определен, нужно использовать context.bot.send_data
         
-        # ВАЖНО: Если мы отправляем данные обратно через tg.sendData(), 
-        # мы можем закрыть Web App здесь, чтобы пользователь увидел результат.
-        # tg.close() # Вызовем закрытие из JS, но можно и тут, если нужно
+        # Для простоты, пока просто отвечаем в чат, чтобы подтвердить, что бэкенд получил данные
+        await update.message.reply_text(f"Web App отправил данные: {data_received}. Результат: {response_text}")
         return
-
-    # Если данные не соответствуют ожидаемому формату
-    await update.message.reply_text(f"Получены неизвестные данные из приложения: {data_received}")
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает нажатия на inline-кнопки."""

@@ -93,12 +93,13 @@
         // 2. Функция для отправки данных боту
         function sendRegistrationData(courseId) {
             // Отправляем команду и ID курса обратно боту
-            tg.sendData(`REGISTER:${courseId}`); 
+            tg.sendData(`WEB_REGISTER:${courseId}`); // Изменили префикс для ясности
             
-            // Обновляем контент, чтобы показать, что данные отправлены, и оставляем кнопку закрытия
+            // Обновляем контент, чтобы показать, что данные отправлены
             document.getElementById('course_buttons').innerHTML = `
-                <p style="color: green; font-weight: bold;">Данные отправлены на сервер. Пожалуйста, вернитесь в чат для подтверждения.</p>
+                <p style="color: green; font-weight: bold;">Запрос на запись на ${courseId} отправлен. Закройте приложение.</p>
             `;
+            // Оставляем кнопку закрытия
             document.querySelector('.close-btn').style.display = 'block'; 
         }
 
