@@ -399,8 +399,6 @@ def main() -> None:
         logger.critical("Запуск невозможен: TELEGRAM_TOKEN не установлен.")
         return
         
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-
     # ... (проверки токенов)
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
@@ -414,7 +412,7 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_data_input)) 
     
     # 3. Обработчик для обычных текстовых запросов (когда НЕ ждем ввод)
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # 4. Обработчик для кнопок
     application.add_handler(CallbackQueryHandler(button_callback)) 

@@ -60,75 +60,57 @@
             <p id="user_id_display">Загрузка...</p>
         </div>
 
-        <p style="margin-top: 30px;">Здесь будет располагаться форма записи или каталог курсов.</p>
+        <p style="margin-top: 30px;">Выберите курс для записи:</p>
         
-        <!-- Кнопки будут добавлены динамически через JavaScript -->
-        <div id="course_buttons">
-            <!-- Кнопки появятся здесь -->
-        </div>
+        <!-- Кнопки курсов будут созданы здесь -->
+        <div id="course_buttons"></div>
 
         <button class="close-btn" onclick="closeWebApp()">Закрыть Приложение</button>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        
-        // 1. Инициализация и отображение ID
-        document.getElementById('user_id_display').textContent = tg.initDataUnsafe.user.id || 'ID не найден';
-        tg.ready();
-        tg.expand(); 
 
-        //  ОБРАБОТЧИК: Ловит ответ от бота после отправки данных
-        tg.onEvent('data_received', (data) => {
-            console.log('Data received from bot:', data);
-            
-            // Обновляем контент, чтобы показать результат, полученный от бота
-            document.getElementById('course_buttons').innerHTML = `
-                <p style="color: blue; font-weight: bold;">Подтверждение от сервера:</p>
-                <p style="color: blue;">${data}</p>
-            `;
-            document.querySelector('.close-btn').style.display = 'block';
-        });
-        
-        // 2. Функция для отправки данных боту
+        // 1. Инициализация и отображение ID пользователя
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            document.getElementById('user_id_display').textContent = tg.initDataUnsafe.user.id;
+        } else {
+            document.getElementById('user_id_display').textContent = 'Открыто вне Telegram';
+        }
+        tg.ready();
+        tg.expand();
+
+        // 2. Функция отправки выбранного курса боту
         function sendRegistrationData(courseId) {
-            // Отправляем команду и ID курса обратно боту
-            tg.sendData(`WEB_REGISTER:${courseId}`); // Изменили префикс для ясности
-            
-            // Обновляем контент, чтобы показать, что данные отправлены
-            document.getElementById('course_buttons').innerHTML = `
-                <p style="color: green; font-weight: bold;">Запрос на запись на ${courseId} отправлен. Закройте приложение.</p>
-            `;
-            // Оставляем кнопку закрытия
-            document.querySelector('.close-btn').style.display = 'block'; 
+            tg.sendData(`WEB_REGISTER:${courseId}`); // Отправка данных боту
+            tg.close(); // Автоматическое закрытие WebApp после отправки
         }
 
+        // 3. Закрытие WebApp вручную
         function closeWebApp() {
             tg.close();
         }
-        
-        // 3. Динамическое создание кнопок курсов
+
+        // 4. Динамическое создание кнопок курсов
         function createCourseButtons() {
             const container = document.getElementById('course_buttons');
-            
             const courses = {
                 'acting_basic': 'Основы Актерского Мастерства',
                 'voice_tech': 'Техника Голоса и Речи',
                 'improvisation': 'Импровизация'
             };
-            
+
             for (const id in courses) {
                 const button = document.createElement('button');
                 button.textContent = courses[id];
                 button.className = 'register-btn';
-                button.onclick = () => sendRegistrationData(id); // При нажатии отправляем ID
+                button.onclick = () => sendRegistrationData(id); // Отправка выбранного курса
                 container.appendChild(button);
             }
         }
-        
-        // ЯВНЫЙ ВЫЗОВ ФУНКЦИИ СОЗДАНИЯ КНОПОК ПОСЛЕ ИНИЦИАЛИЗАЦИИ
+
+        // Вызов функции после инициализации
         createCourseButtons();
-        
     </script>
 </body>
 </html>
