@@ -80,31 +80,41 @@
         
         // 2. Функция для отправки данных боту
         function sendRegistrationData(courseId) {
-            // Отправляем команду и ID курса обратно боту (main.py ждет "REGISTER:ID")
+            // Отправляем команду и ID курса обратно боту
             tg.sendData(`REGISTER:${courseId}`); 
-            tg.close(); // Закрываем Web App после отправки данных
+            
+            // Обновляем контент, чтобы показать, что данные отправлены, и оставляем кнопку закрытия
+            document.getElementById('course_buttons').innerHTML = `
+                <p style="color: green; font-weight: bold;">Данные отправлены на сервер. Пожалуйста, вернитесь в чат для подтверждения.</p>
+            `;
+            document.querySelector('.close-btn').style.display = 'block'; 
         }
 
         function closeWebApp() {
             tg.close();
         }
         
-        // 3. Динамическое создание кнопок курсовывы
-        const container = document.getElementById('course_buttons');
-        
-        const courses = {
-            'acting_basic': 'Основы Актерского Мастерства',
-            'voice_tech': 'Техника Голоса и Речи',
-            'improvisation': 'Импровизация'
-        };
-        
-        for (const id in courses) {
-            const button = document.createElement('button');
-            button.textContent = courses[id];
-            button.className = 'register-btn';
-            button.onclick = () => sendRegistrationData(id); // При нажатии отправляем ID
-            container.appendChild(button);
+        // 3. Динамическое создание кнопок курсов
+        function createCourseButtons() {
+            const container = document.getElementById('course_buttons');
+            
+            const courses = {
+                'acting_basic': 'Основы Актерского Мастерства',
+                'voice_tech': 'Техника Голоса и Речи',
+                'improvisation': 'Импровизация'
+            };
+            
+            for (const id in courses) {
+                const button = document.createElement('button');
+                button.textContent = courses[id];
+                button.className = 'register-btn';
+                button.onclick = () => sendRegistrationData(id); // При нажатии отправляем ID
+                container.appendChild(button);
+            }
         }
+        
+        // ЯВНЫЙ ВЫЗОВ ФУНКЦИИ СОЗДАНИЯ КНОПОК ПОСЛЕ ИНИЦИАЛИЗАЦИИ
+        createCourseButtons();
         
     </script>
 </body>

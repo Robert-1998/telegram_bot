@@ -595,7 +595,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 model='gemini-2.5-flash', 
                 contents=user_text,
                 config=genai.types.GenerateContentConfig(
-                    system_instruction="Ты — строгий ассистент школы актерского мастерства. Если пользователь спрашивает о деталях курса (используя ID) или о своей записи (используя ID), ТЫ ОБЯЗАН использовать предоставленные функции. Если пользователь спрашивает 'какие у вас есть курсы?', ответь одним сообщением: [LIST_COURSES_START] и затем перечисли курсы в виде: ID: Название Курса. В остальных случаях отвечай дружелюбно.",
+                    system_instruction="Ты — ассистент школы актерского мастерства. Если пользователь спрашивает о деталях курса (используя ID) или о своей записи (используя ID), ТЫ ОБЯЗАН использовать предоставленные функции. Если пользователь спрашивает 'какие у вас есть курсы?', ответь одним сообщением: [LIST_COURSES_START] и затем перечисли курсы в виде: ID: Название Курса. В остальных случаях отвечай дружелюбно.",
                     tools=tools
                 )
             )
@@ -701,10 +701,20 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         if registration_result.get("status") == "success":
             response_text = f"✅ Запись на курс {course_id} подтверждена через Web App!"
+            
+            # Отправляем подтверждение обратно в Web App (если оно еще открыто)
+            tg_data = f"SUCCESS: Запись на {course_id} прошла успешно."
+            tg.sendData(tg_data) # Отправляем подтверждение
+            
         else:
             response_text = f"❌ Ошибка при записи через Web App: {registration_result.get('error', 'Неизвестная ошибка.')}"
             
+        # Отправляем сообщение в чат (для надежности)
         await update.message.reply_text(response_text)
+        
+        # ВАЖНО: Если мы отправляем данные обратно через tg.sendData(), 
+        # мы можем закрыть Web App здесь, чтобы пользователь увидел результат.
+        # tg.close() # Вызовем закрытие из JS, но можно и тут, если нужно
         return
 
     # Если данные не соответствуют ожидаемому формату
