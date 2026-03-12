@@ -1,36 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Школа Актерского Мастерства - Web App</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-body { font-family: sans-serif; text-align:center; padding:20px; background:#f4f4f9; }
-.container { max-width:600px; margin:0 auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);}
-button { margin:5px; padding:10px 20px; border:none; border-radius:5px; font-weight:bold; cursor:pointer; }
-.register-btn { background:#28a745; color:white; }
-.close-btn { background:#dc3545; color:white; }
-.status { margin:15px 0; font-weight:bold; }
+body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; color: #333; }
+.container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
+h1 { color: #007bff; }
+button { margin: 5px; padding: 10px 20px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
+.register-btn { background-color: #28a745; color: white; }
+.close-btn { background-color: #dc3545; color: white; }
+#status { margin: 15px 0; font-weight: bold; }
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Добро пожаловать!</h1>
-<p class="status" id="status">Загрузка курсов...</p>
-<div id="course_buttons"></div>
-<button class="close-btn" onclick="tg.close()">Закрыть</button>
+    <h1>Добро пожаловать в Школу!</h1>
+    <p id="status">Загрузка списка курсов...</p>
+    <div id="course_buttons"></div>
+    <button class="close-btn" onclick="tg.close()">Закрыть</button>
 </div>
 
 <script>
 const tg = window.Telegram.WebApp;
-tg.ready(); tg.expand();
+tg.ready();
+tg.expand();
+
 let courses = {};
 
-function createButtons(courses){
+// Создание кнопок для курсов
+function createCourseButtons(courses) {
     const container = document.getElementById('course_buttons');
     container.innerHTML = "";
-    for(const id in courses){
+    for (const id in courses) {
         const btn = document.createElement('button');
         btn.className = 'register-btn';
         btn.textContent = courses[id];
@@ -40,28 +44,31 @@ function createButtons(courses){
     document.getElementById('status').textContent = "Выберите курс для записи:";
 }
 
-function registerCourse(id){
-    document.getElementById('status').textContent = `Запрос на запись на "${courses[id]}"...`;
-    tg.sendData(`WEB_REGISTER:${id}`);
+// Отправка запроса на регистрацию
+function registerCourse(courseId) {
+    document.getElementById('status').textContent = `Отправка запроса на запись на "${courses[courseId]}"...`;
+    tg.sendData(`WEB_REGISTER:${courseId}`);
 }
 
-// Обработка данных от бота
-tg.onEvent('data_received', data=>{
-    if(data.startsWith("[LIST_COURSES_START]")){
+// Получение данных от бота
+tg.onEvent('data_received', (data) => {
+    if (data.startsWith("[LIST_COURSES_START]")) {
+        // Получаем список курсов и создаем кнопки
         const text = data.split("[LIST_COURSES_START]")[1].trim();
-        courses={};
-        text.split("\n").forEach(line=>{
-            const [id,name]=line.split(":");
-            courses[id.trim()]=name.trim();
+        courses = {};
+        text.split("\n").forEach(line => {
+            const [id, name] = line.split(":");
+            if(id && name) courses[id.trim()] = name.trim();
         });
-        createButtons(courses);
+        createCourseButtons(courses);
     } else {
-        document.getElementById('status').textContent=data;
-        document.getElementById('course_buttons').innerHTML="";
+        // Подтверждение регистрации или ошибка
+        document.getElementById('status').textContent = data;
+        document.getElementById('course_buttons').innerHTML = "";
     }
 });
 
-// Запрос списка курсов при запуске
+// Запрос списка курсов сразу при открытии Web App
 tg.sendData("GET_COURSES");
 </script>
 </body>

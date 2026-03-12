@@ -42,30 +42,35 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = str(update.effective_user.id)
     data_received = web_app_data.data
-    logger.info(f"Web App data from {user_id}: {data_received}")
+    logger.info(f"WebApp data from {user_id}: {data_received}")
 
-    # 1. Получение списка курсов
+    # --- Запрос списка курсов ---
     if data_received == "GET_COURSES":
         courses_list = ""
         for cid, course in data_manager.MOCK_DB_SCHOOL["courses"].items():
             courses_list += f"{cid}: {course['name']}\n"
-        await update.message.reply_web_app_data(f"[LIST_COURSES_START]\n{courses_list}")
+        # Ответ WebApp обычным сообщением
+        await update.message.reply_text(f"[LIST_COURSES_START]\n{courses_list}")
         return
 
-    # 2. Регистрация на курс
+    # --- Регистрация на курс ---
     if data_received.startswith("WEB_REGISTER:"):
         course_id = data_received.split(":")[1]
+
+        # Проверка записи
         registration_check = data_manager.check_user_registration_status(user_id)
         if "Вы записаны на курс" in registration_check:
             response_text = registration_check
         else:
-            result = data_manager.register_user_for_course(user_id, course_id)
-            if result.get("status") == "success":
-                course_name = data_manager.MOCK_DB_SCHOOL["courses"][course_id]["name"]
+            registration_result = data_manager.register_user_for_course(user_id, course_id)
+            if registration_result.get("status") == "success":
+                course_name = data_manager.MOCK_DB_SCHOOL['courses'][course_id]['name']
                 response_text = f"✅ Вы успешно записаны на курс '{course_name}'!"
             else:
-                response_text = f"❌ Ошибка при записи: {result.get('error','Неизвестная ошибка')}"
-        await update.message.reply_web_app_data(response_text)
+                response_text = f"❌ Ошибка при записи: {registration_result.get('error','Неизвестная ошибка.')}"
+
+        # Отправка ответа WebApp
+        await update.message.reply_text(response_text)
         return
 
 # --- Обработка inline-кнопок ---
