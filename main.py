@@ -8,6 +8,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from google import genai 
 from google.genai.errors import APIError
 import data_manager # импорт модуля БД
+from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+
 
 
 logging.basicConfig(
@@ -41,11 +43,28 @@ except Exception as e:
 
 # --- 4. ОБРАБОТЧИКИ ---
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """подтверждение получения команды start"""
-    user = update.effective_user
-    await update.message.reply_html(
-        f"Привет, {user.mention_html()}! Я ваш ассистент. Чем могу помочь? Спросите меня о курсах!",
+# async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """подтверждение получения команды start"""
+#     user = update.effective_user
+#     await update.message.reply_html(
+#         f"Привет, {user.mention_html()}! Я ваш ассистент. Чем могу помочь? Спросите меня о курсах!",
+#     )
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    keyboard = [
+        [KeyboardButton(
+            "📱 Открыть приложение",
+            web_app=WebAppInfo(
+                url="https://robert-1998.github.io/telegram_bot/webapp.html"
+            )
+        )]
+    ]
+
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+    await update.message.reply_text(
+        "Откройте приложение школы:",
+        reply_markup=reply_markup
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -223,10 +242,7 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 response_text = f"✅ Успешно! Вы записаны на курс '{course_name}' через Web App."
             else:
                 response_text = f"❌ Ошибка при записи: {registration_result.get('error', 'Неизвестная ошибка.')}"
-            
-        # Отправляем ответ обратно в Web App (используя tg.sendData)
-        tg.sendData(response_text) # tg здесь не определен, нужно использовать context.bot.send_data
-        
+                    
         # Для простоты, пока просто отвечаем в чат, чтобы подтвердить, что бэкенд получил данные
         await update.message.reply_text(f"Web App отправил данные: {data_received}. Результат: {response_text}")
         return
