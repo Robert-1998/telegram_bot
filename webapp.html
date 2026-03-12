@@ -6,35 +6,31 @@
 <title>Школа Актерского Мастерства - Web App</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
-.container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
-button { margin: 5px; padding: 10px 20px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
-.register-btn { background-color: #28a745; color: white; }
-.close-btn { background-color: #dc3545; color: white; }
-.status { margin: 15px 0; font-weight: bold; }
+body { font-family: sans-serif; text-align:center; padding:20px; background:#f4f4f9; }
+.container { max-width:600px; margin:0 auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+button { margin:5px; padding:10px 20px; border:none; border-radius:5px; font-weight:bold; cursor:pointer; }
+.register-btn { background:#28a745; color:white; }
+.close-btn { background:#dc3545; color:white; }
+.status { margin:15px 0; font-weight:bold; }
 </style>
 </head>
 <body>
 <div class="container">
-    <h1>Добро пожаловать!</h1>
-    <p class="status" id="status">Загрузка списка курсов...</p>
-    <div id="course_buttons"></div>
-    <button class="close-btn" onclick="tg.close()">Закрыть</button>
+<h1>Добро пожаловать!</h1>
+<p class="status" id="status">Загрузка курсов...</p>
+<div id="course_buttons"></div>
+<button class="close-btn" onclick="tg.close()">Закрыть</button>
 </div>
 
 <script>
 const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
-
-// Web App будет хранить список курсов
+tg.ready(); tg.expand();
 let courses = {};
 
-// Создание кнопок для курсов
-function createCourseButtons(courses) {
+function createButtons(courses){
     const container = document.getElementById('course_buttons');
     container.innerHTML = "";
-    for (const id in courses) {
+    for(const id in courses){
         const btn = document.createElement('button');
         btn.className = 'register-btn';
         btn.textContent = courses[id];
@@ -44,35 +40,29 @@ function createCourseButtons(courses) {
     document.getElementById('status').textContent = "Выберите курс для записи:";
 }
 
-// Отправка запроса на регистрацию курса
-function registerCourse(courseId) {
-    document.getElementById('status').textContent = `Отправка запроса на запись на "${courses[courseId]}"...`;
-    tg.sendData(`WEB_REGISTER:${courseId}`);
+function registerCourse(id){
+    document.getElementById('status').textContent = `Запрос на запись на "${courses[id]}"...`;
+    tg.sendData(`WEB_REGISTER:${id}`);
 }
 
-// Ловим данные от бота через Web App API
-tg.onEvent('data_received', (data) => {
-    if (data.startsWith("[LIST_COURSES_START]")) {
+// Обработка данных от бота
+tg.onEvent('data_received', data=>{
+    if(data.startsWith("[LIST_COURSES_START]")){
         const text = data.split("[LIST_COURSES_START]")[1].trim();
-        courses = {};
-        text.split("\n").forEach(line => {
-            const [id, name] = line.split(":");
-            courses[id.trim()] = name.trim();
+        courses={};
+        text.split("\n").forEach(line=>{
+            const [id,name]=line.split(":");
+            courses[id.trim()]=name.trim();
         });
-        createCourseButtons(courses);
-    } else if (data.startsWith("✅")) {
-        // Успешная запись
-        document.getElementById('status').textContent = data;
-        document.getElementById('course_buttons').innerHTML = "";
-    } else if (data.startsWith("❌")) {
-        // Ошибка записи
-        document.getElementById('status').textContent = data;
+        createButtons(courses);
+    } else {
+        document.getElementById('status').textContent=data;
+        document.getElementById('course_buttons').innerHTML="";
     }
 });
 
-// Запрос списка курсов у бота при открытии
+// Запрос списка курсов при запуске
 tg.sendData("GET_COURSES");
-
 </script>
 </body>
 </html>
