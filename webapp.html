@@ -1,25 +1,30 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Школа Актерского Мастерства - Web App</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; color: #333; }
-.container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
-h1 { color: #007bff; }
+body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
+.container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
 button { margin: 5px; padding: 10px 20px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
 .register-btn { background-color: #28a745; color: white; }
 .close-btn { background-color: #dc3545; color: white; }
-#status { margin: 15px 0; font-weight: bold; }
+.status { margin: 15px 0; font-weight: bold; }
+.input-field { display: block; margin: 10px auto; padding: 8px; width: 80%; border-radius: 5px; border: 1px solid #ccc; }
 </style>
 </head>
 <body>
 <div class="container">
-    <h1>Добро пожаловать в Школу!</h1>
-    <p id="status">Загрузка списка курсов...</p>
+    <h1>Добро пожаловать!</h1>
+    <p class="status" id="status">Загрузка списка курсов...</p>
     <div id="course_buttons"></div>
+    <div id="registration_form" style="display:none;">
+        <input type="text" id="user_name" class="input-field" placeholder="Ваше имя">
+        <input type="text" id="user_phone" class="input-field" placeholder="Ваш телефон">
+        <button id="submit_registration" class="register-btn">Записаться</button>
+    </div>
     <button class="close-btn" onclick="tg.close()">Закрыть</button>
 </div>
 
@@ -29,6 +34,7 @@ tg.ready();
 tg.expand();
 
 let courses = {};
+let selectedCourseId = null;
 
 // Создание кнопок для курсов
 function createCourseButtons(courses) {
@@ -38,37 +44,54 @@ function createCourseButtons(courses) {
         const btn = document.createElement('button');
         btn.className = 'register-btn';
         btn.textContent = courses[id];
-        btn.onclick = () => registerCourse(id);
+        btn.onclick = () => selectCourse(id);
         container.appendChild(btn);
     }
     document.getElementById('status').textContent = "Выберите курс для записи:";
 }
 
-// Отправка запроса на регистрацию
-function registerCourse(courseId) {
-    document.getElementById('status').textContent = `Отправка запроса на запись на "${courses[courseId]}"...`;
-    tg.sendData(`WEB_REGISTER:${courseId}`);
+// Когда пользователь выбирает курс
+function selectCourse(courseId) {
+    selectedCourseId = courseId;
+    document.getElementById('course_buttons').style.display = "none";
+    document.getElementById('registration_form').style.display = "block";
+    document.getElementById('status').textContent = `Вы выбрали курс "${courses[courseId]}". Введите ваши данные:`;
 }
 
-// Получение данных от бота
+// Отправка данных для записи
+document.getElementById('submit_registration').onclick = () => {
+    const name = document.getElementById('user_name').value.trim();
+    const phone = document.getElementById('user_phone').value.trim();
+
+    if (!name || !phone) {
+        alert("Пожалуйста, заполните имя и телефон.");
+        return;
+    }
+
+    tg.sendData(`WEB_REGISTER:${selectedCourseId}:${name}:${phone}`);
+    document.getElementById('status').textContent = "Отправка данных на запись...";
+    document.getElementById('registration_form').style.display = "none";
+};
+
+// Ловим данные от бота
 tg.onEvent('data_received', (data) => {
     if (data.startsWith("[LIST_COURSES_START]")) {
-        // Получаем список курсов и создаем кнопки
         const text = data.split("[LIST_COURSES_START]")[1].trim();
         courses = {};
         text.split("\n").forEach(line => {
             const [id, name] = line.split(":");
-            if(id && name) courses[id.trim()] = name.trim();
+            courses[id.trim()] = name.trim();
         });
         createCourseButtons(courses);
     } else {
-        // Подтверждение регистрации или ошибка
+        // Показ сообщения от бота (успех или ошибка)
         document.getElementById('status').textContent = data;
-        document.getElementById('course_buttons').innerHTML = "";
+        document.getElementById('course_buttons').style.display = "none";
+        document.getElementById('registration_form').style.display = "none";
     }
 });
 
-// Запрос списка курсов сразу при открытии Web App
+// Запрос списка курсов при открытии
 tg.sendData("GET_COURSES");
 </script>
 </body>
