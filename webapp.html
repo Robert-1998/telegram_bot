@@ -77,6 +77,18 @@
         document.getElementById('user_id_display').textContent = tg.initDataUnsafe.user.id || 'ID не найден';
         tg.ready();
         tg.expand(); 
+
+        //  ОБРАБОТЧИК: Ловит ответ от бота после отправки данных
+        tg.onEvent('data_received', (data) => {
+            console.log('Data received from bot:', data);
+            
+            // Обновляем контент, чтобы показать результат, полученный от бота
+            document.getElementById('course_buttons').innerHTML = `
+                <p style="color: blue; font-weight: bold;">Подтверждение от сервера:</p>
+                <p style="color: blue;">${data}</p>
+            `;
+            document.querySelector('.close-btn').style.display = 'block';
+        });
         
         // 2. Функция для отправки данных боту
         function sendRegistrationData(courseId) {
