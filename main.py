@@ -217,34 +217,45 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает запросы от Web App: получение списка курсов или регистрация."""
     web_app_data = update.message.web_app_data
     if not web_app_data:
         return
 
-    data_received = web_app_data.data
     user_id = str(update.effective_user.id)
+    data_received = web_app_data.data
     logger.info(f"Received data from Web App from user {user_id}: {data_received}")
 
+    # --- 1. Запрос списка курсов ---
+    if data_received == "GET_COURSES":
+        # Используем текущую MOCK_DB для списка курсов
+        courses_list = ""
+        for cid, course in data_manager.MOCK_DB_SCHOOL["courses"].items():
+            courses_list += f"{cid}: {course['name']}\n"
+
+        response_text = f"[LIST_COURSES_START]\n{courses_list}"
+        await update.message.reply_web_app_data(response_text)
+        return
+
+    # --- 2. Регистрация на курс ---
     if data_received.startswith("WEB_REGISTER:"):
         course_id = data_received.split(":")[1]
-        
-        # 1. Проверяем, не записан ли пользователь уже (используем функцию из БД)
+
+        # Проверяем, не записан ли пользователь
         registration_check = data_manager.check_user_registration_status(user_id)
-        
         if "Вы записаны на курс" in registration_check:
             response_text = registration_check
         else:
-            # 2. Выполняем запись (так как в Web App нет поля для ввода имени/телефона, мы используем заглушку)
+            # Выполняем регистрацию
             registration_result = data_manager.register_user_for_course(user_id, course_id)
-            
             if registration_result.get("status") == "success":
                 course_name = data_manager.MOCK_DB_SCHOOL['courses'][course_id]['name']
-                response_text = f"✅ Успешно! Вы записаны на курс '{course_name}' через Web App."
+                response_text = f"✅ Вы успешно записаны на курс '{course_name}'!"
             else:
                 response_text = f"❌ Ошибка при записи: {registration_result.get('error', 'Неизвестная ошибка.')}"
-                    
-        # Для простоты, пока просто отвечаем в чат, чтобы подтвердить, что бэкенд получил данные
-        await update.message.reply_text(f"Web App отправил данные: {data_received}. Результат: {response_text}")
+
+        # Отправляем результат обратно Web App
+        await update.message.reply_web_app_data(response_text)
         return
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

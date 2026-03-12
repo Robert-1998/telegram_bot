@@ -1,116 +1,78 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Школа Актерского Мастерства - Web App</title>
-    <!-- Подключение Telegram Web App JS API -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: sans-serif;
-            text-align: center;
-            padding: 20px;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            color: #007bff;
-        }
-        .user-info {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background-color: #e9ecef;
-        }
-        button {
-            margin: 5px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .close-btn {
-            background-color: #dc3545;
-            color: white;
-        }
-        .register-btn {
-            background-color: #28a745;
-            color: white;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Школа Актерского Мастерства - Web App</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
+.container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
+button { margin: 5px; padding: 10px 20px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
+.register-btn { background-color: #28a745; color: white; }
+.close-btn { background-color: #dc3545; color: white; }
+.status { margin: 15px 0; font-weight: bold; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Добро пожаловать в Приложение Школы!</h1>
-        <p>Это полноэкранное мини-приложение, открытое внутри Telegram.</p>
-        
-        <div class="user-info">
-            <p>Ваш Telegram User ID (получен из Web App API):</p>
-            <p id="user_id_display">Загрузка...</p>
-        </div>
+<div class="container">
+    <h1>Добро пожаловать!</h1>
+    <p class="status" id="status">Загрузка списка курсов...</p>
+    <div id="course_buttons"></div>
+    <button class="close-btn" onclick="tg.close()">Закрыть</button>
+</div>
 
-        <p style="margin-top: 30px;">Выберите курс для записи:</p>
-        
-        <!-- Кнопки курсов будут созданы здесь -->
-        <div id="course_buttons"></div>
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
 
-        <button class="close-btn" onclick="closeWebApp()">Закрыть Приложение</button>
-    </div>
+// Web App будет хранить список курсов
+let courses = {};
 
-    <script>
-        const tg = window.Telegram.WebApp;
+// Создание кнопок для курсов
+function createCourseButtons(courses) {
+    const container = document.getElementById('course_buttons');
+    container.innerHTML = "";
+    for (const id in courses) {
+        const btn = document.createElement('button');
+        btn.className = 'register-btn';
+        btn.textContent = courses[id];
+        btn.onclick = () => registerCourse(id);
+        container.appendChild(btn);
+    }
+    document.getElementById('status').textContent = "Выберите курс для записи:";
+}
 
-        // 1. Инициализация и отображение ID пользователя
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            document.getElementById('user_id_display').textContent = tg.initDataUnsafe.user.id;
-        } else {
-            document.getElementById('user_id_display').textContent = 'Открыто вне Telegram';
-        }
-        tg.ready();
-        tg.expand();
+// Отправка запроса на регистрацию курса
+function registerCourse(courseId) {
+    document.getElementById('status').textContent = `Отправка запроса на запись на "${courses[courseId]}"...`;
+    tg.sendData(`WEB_REGISTER:${courseId}`);
+}
 
-        // 2. Функция отправки выбранного курса боту
-        function sendRegistrationData(courseId) {
-            tg.sendData(`WEB_REGISTER:${courseId}`); // Отправка данных боту
-            tg.close(); // Автоматическое закрытие WebApp после отправки
-        }
+// Ловим данные от бота через Web App API
+tg.onEvent('data_received', (data) => {
+    if (data.startsWith("[LIST_COURSES_START]")) {
+        const text = data.split("[LIST_COURSES_START]")[1].trim();
+        courses = {};
+        text.split("\n").forEach(line => {
+            const [id, name] = line.split(":");
+            courses[id.trim()] = name.trim();
+        });
+        createCourseButtons(courses);
+    } else if (data.startsWith("✅")) {
+        // Успешная запись
+        document.getElementById('status').textContent = data;
+        document.getElementById('course_buttons').innerHTML = "";
+    } else if (data.startsWith("❌")) {
+        // Ошибка записи
+        document.getElementById('status').textContent = data;
+    }
+});
 
-        // 3. Закрытие WebApp вручную
-        function closeWebApp() {
-            tg.close();
-        }
+// Запрос списка курсов у бота при открытии
+tg.sendData("GET_COURSES");
 
-        // 4. Динамическое создание кнопок курсов
-        function createCourseButtons() {
-            const container = document.getElementById('course_buttons');
-            const courses = {
-                'acting_basic': 'Основы Актерского Мастерства',
-                'voice_tech': 'Техника Голоса и Речи',
-                'improvisation': 'Импровизация'
-            };
-
-            for (const id in courses) {
-                const button = document.createElement('button');
-                button.textContent = courses[id];
-                button.className = 'register-btn';
-                button.onclick = () => sendRegistrationData(id); // Отправка выбранного курса
-                container.appendChild(button);
-            }
-        }
-
-        // Вызов функции после инициализации
-        createCourseButtons();
-    </script>
+</script>
 </body>
 </html>
