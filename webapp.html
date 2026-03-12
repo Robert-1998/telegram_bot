@@ -50,7 +50,7 @@ function createCourseButtons(courses) {
     document.getElementById('status').textContent = "Выберите курс для записи:";
 }
 
-// Когда пользователь выбирает курс
+// Выбор курса
 function selectCourse(courseId) {
     selectedCourseId = courseId;
     document.getElementById('course_buttons').style.display = "none";
@@ -58,22 +58,17 @@ function selectCourse(courseId) {
     document.getElementById('status').textContent = `Вы выбрали курс "${courses[courseId]}". Введите ваши данные:`;
 }
 
-// Отправка данных для записи
+// Отправка регистрации
 document.getElementById('submit_registration').onclick = () => {
     const name = document.getElementById('user_name').value.trim();
     const phone = document.getElementById('user_phone').value.trim();
-
-    if (!name || !phone) {
-        alert("Пожалуйста, заполните имя и телефон.");
-        return;
-    }
-
+    if (!name || !phone) { alert("Заполните имя и телефон"); return; }
     tg.sendData(`WEB_REGISTER:${selectedCourseId}:${name}:${phone}`);
-    document.getElementById('status').textContent = "Отправка данных на запись...";
+    document.getElementById('status').textContent = "Отправка данных...";
     document.getElementById('registration_form').style.display = "none";
 };
 
-// Ловим данные от бота
+// Получение данных от бота
 tg.onEvent('data_received', (data) => {
     if (data.startsWith("[LIST_COURSES_START]")) {
         const text = data.split("[LIST_COURSES_START]")[1].trim();
@@ -84,7 +79,6 @@ tg.onEvent('data_received', (data) => {
         });
         createCourseButtons(courses);
     } else {
-        // Показ сообщения от бота (успех или ошибка)
         document.getElementById('status').textContent = data;
         document.getElementById('course_buttons').style.display = "none";
         document.getElementById('registration_form').style.display = "none";

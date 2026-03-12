@@ -155,33 +155,22 @@
 # if __name__ == "__main__":
 #     main()
 
+# bot.py
 import logging
 import os
-import asyncio
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
-import data_manager  # твоя БД с MOCK_DB_SCHOOL
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import data_manager
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Откройте Web App для записи на курсы!")
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [KeyboardButton(
-            "📱 Открыть приложение",
-            web_app=WebAppInfo(url="https://robert-1998.github.io/telegram_bot/webapp.html")
-        )]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Откройте приложение школы:", reply_markup=reply_markup)
-
-
+# --- Web App Data Handler ---
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     web_app_data = update.message.web_app_data
     if not web_app_data:
@@ -189,16 +178,17 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = str(update.effective_user.id)
     data_received = web_app_data.data
+    logger.info(f"Web App data from {user_id}: {data_received}")
 
-    # --- Запрос списка курсов ---
+    # --- GET COURSES ---
     if data_received == "GET_COURSES":
         courses_list = ""
         for cid, course in data_manager.MOCK_DB_SCHOOL["courses"].items():
             courses_list += f"{cid}: {course['name']}\n"
-        await update.message.reply_web_app_data(f"[LIST_COURSES_START]\n{courses_list}")
+        await context.bot.send_message(chat_id=user_id, text=f"[LIST_COURSES_START]\n{courses_list}")
         return
 
-    # --- Регистрация ---
+    # --- REGISTER COURSE ---
     if data_received.startswith("WEB_REGISTER:"):
         try:
             parts = data_received.split(":", 3)
@@ -217,24 +207,20 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
                 else:
                     response_text = f"❌ Ошибка при записи: {result.get('error', 'Неизвестная ошибка.')}"
         except Exception as e:
-            logger.error(f"Ошибка при регистрации через Web App: {e}")
+            logger.error(f"Ошибка регистрации: {e}")
             response_text = "❌ Не удалось обработать запись. Проверьте формат данных."
 
-        await update.message.reply_web_app_data(response_text)
-
+        await context.bot.send_message(chat_id=user_id, text=response_text)
 
 def main():
     if not TELEGRAM_TOKEN:
-        logger.critical("TELEGRAM_TOKEN не установлен!")
+        logger.critical("TELEGRAM_TOKEN не установлен")
         return
 
     application = Application.builder().token(TELEGRAM_TOKEN).build()
-    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
-
-    logger.info("Бот запущен...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
